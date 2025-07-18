@@ -14,7 +14,7 @@ export default function Index() {
             >
                 <View style={styles.content}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Wellth</Text>
+                        <Text style={styles.title}>Steps</Text>
                         <Text style={styles.tagline}>Manage your health</Text>
                     </View>
                 </View>
