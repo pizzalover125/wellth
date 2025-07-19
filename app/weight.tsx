@@ -1,27 +1,52 @@
+import * as Font from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
-import { StatusBar, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StatusBar, StyleSheet, Text, View } from 'react-native';
 import NavigationBar from '../components/NavigationBar';
 
 export default function Index() {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  useEffect(() => {
+    Font.loadAsync({
+      'PixelFont': require('../assets/fonts/Press Start 2P Regular.ttf'),
+    }).then(() => setFontsLoaded(true));
+  }, []);
+
+  if (!fontsLoaded) {
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2563eb" />
-            
-            <LinearGradient
-                colors={['#3b82f6', '#1d4ed8']}
-                style={styles.gradient}
-            >
-                <View style={styles.content}>
-                    <View style={styles.header}>
-                        <Text style={styles.title}>Wellth</Text>
-                        <Text style={styles.tagline}>Manage your health</Text>
-                    </View>
-                </View>
-                <NavigationBar />
-            </LinearGradient>
-        </View>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#2563eb" />
+        <LinearGradient
+          colors={['#3b82f6', '#1d4ed8']}
+          style={styles.gradient}
+        >
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#ffffff" />
+            <Text style={styles.loadingText}>Loading Wellth...</Text>
+          </View>
+        </LinearGradient>
+      </View>
     );
+  }
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#2563eb" />
+      <LinearGradient
+        colors={['#3b82f6', '#1d4ed8']}
+        style={styles.gradient}
+      >
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={[styles.title, styles.pixelFont]}>Weight</Text>
+            <Text style={[styles.tagline, styles.pixelFont]}>Track your weight.</Text>
+          </View>
+        </View>
+        <NavigationBar />
+      </LinearGradient>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -42,7 +67,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 48,
+    fontSize: 40,
     fontWeight: '300',
     color: '#ffffff',
     marginBottom: 8,
@@ -53,6 +78,21 @@ const styles = StyleSheet.create({
     color: '#bfdbfe',
     fontWeight: '400',
     letterSpacing: 0.5,
+  },
+  pixelFont: {
+    fontFamily: 'PixelFont',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 20,
+  },
+  loadingText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '400',
+    textAlign: 'center',
   },
   actions: {
     gap: 16,
@@ -76,6 +116,7 @@ const styles = StyleSheet.create({
     color: '#1d4ed8',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'PixelFont',
   },
   secondaryButton: {
     paddingVertical: 18,
@@ -89,5 +130,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '500',
+    fontFamily: 'PixelFont',
   },
 });

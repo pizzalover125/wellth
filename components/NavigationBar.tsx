@@ -7,103 +7,75 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 export default function BottomNavigationBar() {
   const pathname = usePathname();
 
-  const tabs = [
+  const tabs: { href: '/' | '/steps' | '/water' | '/weight'; icon: React.ElementType; label: string }[] = [
     { href: '/', icon: Home, label: 'Home' },
-    { href: '/water', icon: Droplets, label: 'Water' },
     { href: '/steps', icon: TrendingUp, label: 'Steps' },
+    { href: '/water', icon: Droplets, label: 'Water' },
     { href: '/weight', icon: Scale, label: 'Weight' },
   ];
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['rgba(29, 78, 216, 0.95)', 'rgba(59, 130, 246, 0.85)']}
-        style={styles.navContainer}
-      >
-        <View style={styles.navContent}>
-          {tabs.map((tab) => {
-            const IconComponent = tab.icon;
-            const isActive = pathname === tab.href;
-            
-            return (
-              <Link href={tab.href as any} asChild key={tab.href}>
-                <TouchableOpacity
+    <LinearGradient
+      colors={['#1d4ed8', '#2563eb']}
+      style={styles.container}
+    >
+      <View style={styles.tabContainer}>
+        {tabs.map((tab) => {
+          const isActive = pathname === tab.href;
+          const IconComponent = tab.icon;
+          
+          return (
+            <Link key={tab.href} href={tab.href} asChild>
+              <TouchableOpacity style={styles.tab}>
+                <IconComponent
+                  size={24}
+                  color={isActive ? '#ffffff' : '#bfdbfe'}
+                />
+                <Text
                   style={[
-                    styles.tabButton,
-                    isActive && styles.activeTabButton
+                    styles.tabLabel,
+                    styles.pixelFont,
+                    { color: isActive ? '#ffffff' : '#bfdbfe' }
                   ]}
                 >
-                  <View style={styles.iconContainer}>
-                    <IconComponent 
-                      size={22} 
-                      color={isActive ? '#ffffff' : '#bfdbfe'}
-                      strokeWidth={isActive ? 2.5 : 2}
-                    />
-                  </View>
-                  <Text style={[
-                    styles.tabLabel,
-                    isActive && styles.activeTabLabel
-                  ]}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              </Link>
-            );
-          })}
-        </View>
-      </LinearGradient>
-    </View>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            </Link>
+          );
+        })}
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-  },
-  navContainer: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+    paddingBottom: 34, // Safe area for home indicator
     paddingTop: 12,
-    paddingBottom: 24,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(191, 219, 254, 0.2)',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
     paddingHorizontal: 16,
   },
-  navContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  tabButton: {
+  tab: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingHorizontal: 12,
     minWidth: 60,
-    flex: 1,
-  },
-  activeTabButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 22,
-    height: 22,
   },
   tabLabel: {
-    fontSize: 12,
-    color: '#bfdbfe',
-    fontWeight: '500',
+    fontSize: 10,
     marginTop: 4,
-    letterSpacing: 0.2,
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
-  activeTabLabel: {
-    color: '#ffffff',
-    fontWeight: '600',
+  pixelFont: {
+    fontFamily: 'PixelFont',
   },
 });

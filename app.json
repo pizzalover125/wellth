@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pizzalover125.wellth"
+      "bundleIdentifier": "com.pizzalover125.wellth",
+      "infoPlist": {
+        "NSMotionUsageDescription": "This app uses the motion sensor to count your steps."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -34,7 +37,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
