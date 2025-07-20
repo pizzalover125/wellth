@@ -4,7 +4,7 @@
     "slug": "wellth",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/Wellth.png",
     "scheme": "wellth",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -17,10 +17,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/Wellth.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.pizzalover125.wellth"
     },
     "web": {
       "bundler": "metro",

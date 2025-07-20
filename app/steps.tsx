@@ -7,8 +7,10 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   FlatList,
   Modal,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -16,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { LineChart } from "react-native-chart-kit";
 import NavigationBar from "../components/NavigationBar";
 
 interface SessionLog {
@@ -27,7 +30,24 @@ interface SessionLog {
   name?: string;
 }
 
+interface ChartData {
+  labels: string[];
+  datasets: [
+    {
+      data: number[];
+      color?: (opacity?: number) => string;
+      strokeWidth?: number;
+    }
+  ];
+}
+
 const STORAGE_KEY = "StepsApp_sessionLog";
+const GOALS_STORAGE_KEY = "StepsApp_dailyGoal";
+const { width: screenWidth } = Dimensions.get("window");
+
+const getChartWidth = () => {
+  return screenWidth - 80;
+};
 
 export default function Index() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -45,11 +65,86 @@ export default function Index() {
   const [sessionDuration, setSessionDuration] = useState(0);
   const [sessionLog, setSessionLog] = useState<SessionLog[]>([]);
   const [showLog, setShowLog] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [timerInterval, setTimerInterval] = useState<ReturnType<
     typeof setInterval
   > | null>(null);
   const [editingSession, setEditingSession] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+
+  // Daily Goals States
+  const [dailyGoal, setDailyGoal] = useState(10000); // Default 10,000 steps
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [tempGoalInput, setTempGoalInput] = useState("");
+  const [goalAchieved, setGoalAchieved] = useState(false);
+
+  const loadDailyGoal = async () => {
+    try {
+      const savedGoal = await SecureStore.getItemAsync(GOALS_STORAGE_KEY);
+      if (savedGoal) {
+        setDailyGoal(parseInt(savedGoal));
+      }
+    } catch (error) {
+      console.error("Error loading daily goal:", error);
+    }
+  };
+
+  const saveDailyGoal = async (goal: number) => {
+    try {
+      await SecureStore.setItemAsync(GOALS_STORAGE_KEY, goal.toString());
+    } catch (error) {
+      console.error("Error saving daily goal:", error);
+    }
+  };
+
+  const updateDailyGoal = (newGoal: number) => {
+    setDailyGoal(newGoal);
+    saveDailyGoal(newGoal);
+  };
+
+  const getGoalProgress = () => {
+    if (totalSteps === null || totalSteps === 0) return 0;
+    return Math.min((totalSteps / dailyGoal) * 100, 100);
+  };
+
+  const checkGoalAchievement = () => {
+    const wasAchieved = goalAchieved;
+    const isAchieved = totalSteps !== null && totalSteps >= dailyGoal;
+
+    setGoalAchieved(isAchieved);
+
+    // Show celebration only when goal is first achieved
+    if (isAchieved && !wasAchieved && totalSteps !== null) {
+      Alert.alert(
+        "🎉 Goal Achieved!",
+        `Congratulations! You've reached your daily goal of ${dailyGoal.toLocaleString()} steps!`,
+        [{ text: "Awesome!", style: "default" }]
+      );
+    }
+  };
+
+  const openGoalModal = () => {
+    setTempGoalInput(dailyGoal.toString());
+    setShowGoalModal(true);
+  };
+
+  const saveGoal = () => {
+    const newGoal = parseInt(tempGoalInput);
+    if (isNaN(newGoal) || newGoal <= 0) {
+      Alert.alert("Invalid Goal", "Please enter a valid number greater than 0");
+      return;
+    }
+    if (newGoal > 100000) {
+      Alert.alert(
+        "Goal Too High",
+        "Please enter a goal less than 100,000 steps"
+      );
+      return;
+    }
+    updateDailyGoal(newGoal);
+    setShowGoalModal(false);
+    setTempGoalInput("");
+  };
 
   const loadSessionLog = async () => {
     try {
@@ -96,6 +191,80 @@ export default function Index() {
     }
   };
 
+  const getStatsData = (days: number): ChartData => {
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - days + 1);
+    startDate.setHours(0, 0, 0, 0);
+
+    const dates: Date[] = [];
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      dates.push(date);
+    }
+
+    const stepsByDate = dates.map((date) => {
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const daySteps = sessionLog
+        .filter((session) => {
+          const sessionDate = new Date(session.startTime);
+          return sessionDate >= dayStart && sessionDate <= dayEnd;
+        })
+        .reduce((total, session) => total + session.steps, 0);
+
+      return daySteps;
+    });
+
+    const labels = dates.map((date) => {
+      if (days <= 7) {
+        return date.toLocaleDateString("en-US", { weekday: "short" });
+      } else {
+        return date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+      }
+    });
+
+    return {
+      labels,
+      datasets: [
+        {
+          data: stepsByDate.length ? stepsByDate : [0],
+          color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+          strokeWidth: 3,
+        },
+      ],
+    };
+  };
+
+  const getChartConfig = () => ({
+    backgroundColor: "#ffffff",
+    backgroundGradientFrom: "#ffffff",
+    backgroundGradientTo: "#ffffff",
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(51, 65, 85, ${opacity})`,
+    style: {
+      borderRadius: 12,
+    },
+    propsForDots: {
+      r: "4",
+      strokeWidth: "2",
+      stroke: "#3b82f6",
+    },
+    propsForBackgroundLines: {
+      strokeDasharray: "",
+      stroke: "#e2e8f0",
+      strokeWidth: 1,
+    },
+  });
+
   useEffect(() => {
     const initialize = async () => {
       try {
@@ -112,6 +281,7 @@ export default function Index() {
         }
 
         await loadSessionLog();
+        await loadDailyGoal();
       } catch (error) {
         console.error("Error during initialization:", error);
         setFontsLoaded(true);
@@ -132,6 +302,13 @@ export default function Index() {
       clearInterval(totalStepsInterval);
     };
   }, [sessionActive, isPedometerAvailable]);
+
+  // Check goal achievement when total steps change
+  useEffect(() => {
+    if (totalSteps !== null) {
+      checkGoalAchievement();
+    }
+  }, [totalSteps, dailyGoal]);
 
   const startSession = async () => {
     setSessionSteps(0);
@@ -366,7 +543,10 @@ export default function Index() {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#2563eb" />
-        <LinearGradient colors={["#3b82f6", "#1d4ed8"]} style={styles.gradient}>
+        <LinearGradient
+          colors={["#619dffff", "#1740b0ff"]}
+          style={styles.gradient}
+        >
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#ffffff" />
             <Text style={styles.loadingText}>Loading page...</Text>
@@ -379,7 +559,10 @@ export default function Index() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#2563eb" />
-      <LinearGradient colors={["#3b82f6", "#1d4ed8"]} style={styles.gradient}>
+      <LinearGradient
+        colors={["#619dffff", "#1740b0ff"]}
+        style={styles.gradient}
+      >
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={[styles.title, styles.pixelFont]}>Steps</Text>
@@ -411,6 +594,45 @@ export default function Index() {
             )}
           </View>
 
+          {/* Daily Goal Section */}
+          <View style={styles.goalContainer}>
+            <TouchableOpacity style={styles.goalHeader} onPress={openGoalModal}>
+              <View style={styles.goalInfo}>
+                <Text style={[styles.goalTitle, styles.pixelFont]}>
+                  Daily Goal: {dailyGoal.toLocaleString()}
+                </Text>
+                <Text style={[styles.goalProgress, styles.pixelFont]}>
+                  {totalSteps !== null ? totalSteps.toLocaleString() : 0} /{" "}
+                  {dailyGoal.toLocaleString()}
+                </Text>
+              </View>
+              <View style={styles.goalIcon}>
+                {goalAchieved ? (
+                  <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+                ) : (
+                  <Ionicons name="settings-outline" size={20} color="#bfdbfe" />
+                )}
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBarBackground}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      width: `${getGoalProgress()}%`,
+                      backgroundColor: goalAchieved ? "#10b981" : "#3b82f6",
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.progressPercentage, styles.pixelFont]}>
+                {Math.round(getGoalProgress())}%
+              </Text>
+            </View>
+          </View>
+
           <View style={styles.buttonContainer}>
             <View style={{ width: "100%" }}>
               {!sessionActive ? (
@@ -433,17 +655,29 @@ export default function Index() {
                 </TouchableOpacity>
               )}
             </View>
-            <View style={{ width: "100%" }}>
+            <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={[
                   styles.button,
                   styles.logButton,
-                  styles.fullWidthButton,
+                  styles.halfWidthButton,
                 ]}
                 onPress={() => setShowLog(true)}
               >
                 <Text style={[styles.buttonText, { textAlign: "center" }]}>
                   View Log ({sessionLog.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.statsButton,
+                  styles.halfWidthButton,
+                ]}
+                onPress={() => setShowStats(true)}
+              >
+                <Text style={[styles.buttonText, { textAlign: "center" }]}>
+                  View Stats
                 </Text>
               </TouchableOpacity>
             </View>
@@ -453,6 +687,50 @@ export default function Index() {
         <NavigationBar />
       </LinearGradient>
 
+      {/* Goal Setting Modal - Fixed */}
+      <Modal visible={showGoalModal} animationType="slide" transparent={true}>
+        <View style={styles.goalModalOverlay}>
+          <View style={styles.goalModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, styles.pixelFont]}>
+                Set Daily Goal
+              </Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowGoalModal(false)}
+              >
+                <Ionicons name="close" size={20} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.goalModalContent}>
+              <Text style={[styles.goalLabel, styles.pixelFont]}>
+                Enter your daily step goal:
+              </Text>
+              <TextInput
+                style={[styles.goalInput, styles.pixelFont]}
+                value={tempGoalInput}
+                onChangeText={setTempGoalInput}
+                placeholder="e.g., 10000"
+                placeholderTextColor="#94a3b8"
+                keyboardType="numeric"
+                autoFocus
+              />
+
+              <TouchableOpacity
+                style={styles.saveGoalButton}
+                onPress={saveGoal}
+              >
+                <Text style={[styles.saveGoalButtonText, styles.pixelFont]}>
+                  Save Goal
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Session Log Modal - Fixed */}
       <Modal
         visible={showLog}
         animationType="slide"
@@ -501,6 +779,107 @@ export default function Index() {
           )}
         </View>
       </Modal>
+
+      {/* Stats Modal - Fixed */}
+      <Modal
+        visible={showStats}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, styles.pixelFont]}>
+              Step Statistics
+            </Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowStats(false)}
+            >
+              <Ionicons name="close" size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+
+          {sessionLog.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyText, styles.pixelFont]}>
+                No data available
+              </Text>
+              <Text style={styles.emptySubText}>
+                Complete some sessions to see your statistics!
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.statsScrollView}
+              contentContainerStyle={styles.statsContent}
+            >
+              {/* Past 3 Days */}
+              <View style={styles.chartContainer}>
+                <Text style={[styles.chartTitle, styles.pixelFont]}>
+                  Past 3 Days
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chartScrollContent}
+                >
+                  <LineChart
+                    data={getStatsData(3)}
+                    width={getChartWidth()}
+                    height={220}
+                    chartConfig={getChartConfig()}
+                    bezier
+                    style={styles.chart}
+                  />
+                </ScrollView>
+              </View>
+
+              <View style={styles.chartContainer}>
+                <Text style={[styles.chartTitle, styles.pixelFont]}>
+                  Past Week
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chartScrollContent}
+                >
+                  <LineChart
+                    data={getStatsData(7)}
+                    width={getChartWidth()}
+                    height={220}
+                    chartConfig={getChartConfig()}
+                    bezier
+                    style={styles.chart}
+                  />
+                </ScrollView>
+              </View>
+
+              <View style={styles.chartContainer}>
+                <Text style={[styles.chartTitle, styles.pixelFont]}>
+                  Past Month
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chartScrollContent}
+                >
+                  <LineChart
+                    data={{
+                      ...getStatsData(30),
+                      labels: Array(getStatsData(30).labels.length).fill(""),
+                    }}
+                    width={getChartWidth()}
+                    height={220}
+                    chartConfig={getChartConfig()}
+                    bezier
+                    style={styles.chart}
+                  />
+                </ScrollView>
+              </View>
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -509,9 +888,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
   gradient: {
     flex: 1,
   },
+
   content: {
     flex: 1,
     justifyContent: "space-between",
@@ -519,12 +900,25 @@ const styles = StyleSheet.create({
     paddingTop: 120,
     paddingBottom: 60,
   },
+
   fullWidthButton: {
     width: "100%",
   },
+
+  halfWidthButton: {
+    width: "48%",
+  },
+
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+
   header: {
     alignItems: "center",
   },
+
   title: {
     fontSize: 40,
     fontWeight: "300",
@@ -532,74 +926,238 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     letterSpacing: -1,
   },
+
   tagline: {
     fontSize: 11,
     color: "#bfdbfe",
     fontWeight: "400",
     letterSpacing: 0.5,
   },
+
   stepCounter: {
     alignItems: "center",
     marginTop: 40,
   },
+
   steps: {
     fontSize: 64,
     color: "#ffffff",
     marginBottom: 12,
   },
+
   timer: {
     fontSize: 18,
     color: "#bfdbfe",
     marginBottom: 8,
   },
+
   totalStepsSubtext: {
     fontSize: 12,
     color: "#bfdbfe",
     opacity: 0.8,
   },
+
   totalStepsInSession: {
     fontSize: 14,
     color: "#bfdbfe",
     opacity: 0.9,
   },
+
+  // Daily Goal Styles
+  goalContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 30,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+
+  goalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  goalInfo: {
+    flex: 1,
+  },
+
+  goalTitle: {
+    fontSize: 14,
+    color: "#ffffff",
+    marginBottom: 4,
+  },
+
+  goalProgress: {
+    fontSize: 12,
+    color: "#bfdbfe",
+  },
+
+  goalIcon: {
+    padding: 4,
+  },
+
+  progressBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  progressBarBackground: {
+    flex: 1,
+    height: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#3b82f6",
+    borderRadius: 4,
+    minWidth: 2,
+  },
+
+  progressPercentage: {
+    fontSize: 11,
+    color: "#bfdbfe",
+    minWidth: 32,
+    textAlign: "right",
+  },
+
+  // Goal Modal Styles
+  goalModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+
+  goalModalContainer: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    width: "100%",
+    maxWidth: 400,
+    overflow: "hidden",
+  },
+
+  goalModalContent: {
+    padding: 24,
+  },
+
+  goalLabel: {
+    fontSize: 14,
+    color: "#1e293b",
+    marginBottom: 16,
+  },
+
+  goalInput: {
+    backgroundColor: "#f1f5f9",
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: "#1e293b",
+    marginBottom: 24,
+    textAlign: "center",
+  },
+
+  goalPresets: {
+    marginBottom: 24,
+  },
+
+  presetLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    marginBottom: 12,
+  },
+
+  presetButtons: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  presetButton: {
+    backgroundColor: "#e2e8f0",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+  },
+
+  presetButtonText: {
+    fontSize: 10,
+    color: "#475569",
+  },
+
+  saveGoalButton: {
+    backgroundColor: "#3b82f6",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+
+  saveGoalButtonText: {
+    fontSize: 14,
+    color: "#ffffff",
+  },
+
   pixelFont: {
     fontFamily: "PixelFont",
   },
+
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     gap: 20,
   },
+
   loadingText: {
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "400",
     textAlign: "center",
   },
+
   buttonContainer: {
     alignItems: "center",
     marginTop: 60,
     gap: 16,
   },
+
   button: {
     backgroundColor: "#1e40af",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 10,
   },
+
   logButton: {
     backgroundColor: "#0f766e",
   },
+
+  statsButton: {
+    backgroundColor: "#7c3aed",
+  },
+
   buttonText: {
     fontSize: 14,
     color: "#ffffff",
     fontFamily: "PixelFont",
   },
+
   modalContainer: {
     flex: 1,
     backgroundColor: "#f8fafc",
   },
+
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -609,14 +1167,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     backgroundColor: "#3b82f6",
   },
+
   modalTitle: {
-    fontSize: 17,
+    fontSize: 14,
     color: "#ffffff",
   },
+
   headerButtons: {
     flexDirection: "row",
     gap: 8,
   },
+
   closeButton: {
     backgroundColor: "#dc2626",
     width: 32,
@@ -625,15 +1186,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   clearButton: {
     backgroundColor: "#ea580c",
   },
+
   logList: {
     flex: 1,
   },
+
   logContent: {
     padding: 16,
   },
+
   sessionItem: {
     backgroundColor: "#ffffff",
     padding: 16,
@@ -645,37 +1210,44 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+
   sessionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 8,
   },
+
   sessionName: {
     fontSize: 14,
     color: "#1e293b",
     marginBottom: 4,
     fontWeight: "bold",
   },
+
   sessionStats: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     minWidth: 200,
   },
+
   sessionSteps: {
     fontSize: 12,
     color: "#1e40af",
   },
+
   sessionDuration: {
     fontSize: 12,
     color: "#0f766e",
   },
+
   sessionDate: {
     fontSize: 12,
     color: "#64748b",
     fontFamily: "PixelFont",
   },
+
   deleteButton: {
     backgroundColor: "#dc2626",
     width: 28,
@@ -686,9 +1258,11 @@ const styles = StyleSheet.create({
     padding: 0,
     margin: 0,
   },
+
   editingContainer: {
     gap: 12,
   },
+
   nameInput: {
     backgroundColor: "#f1f5f9",
     padding: 12,
@@ -698,47 +1272,89 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#3b82f6",
   },
+
   editButtons: {
     flexDirection: "row",
     gap: 8,
     justifyContent: "flex-end",
   },
+
   editButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
+
   saveButton: {
     backgroundColor: "#16a34a",
   },
+
   cancelButton: {
     backgroundColor: "#64748b",
   },
+
   editButtonText: {
     fontSize: 12,
     color: "#ffffff",
   },
+
   emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
   },
+
   emptyText: {
     fontSize: 14,
     color: "#64748b",
     marginBottom: 8,
   },
+
   emptySubText: {
     fontSize: 14,
     color: "#94a3b8",
     textAlign: "center",
     lineHeight: 20,
   },
+
+  statsScrollView: {
+    flex: 1,
+  },
+
+  statsContent: {
+    padding: 16,
+    paddingHorizontal: 12,
+  },
+
+  chartContainer: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: "hidden",
+  },
+
+  chartTitle: {
+    fontSize: 16,
+    color: "#1e293b",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+
+  chart: {
+    borderRadius: 8,
+    alignSelf: "center",
+  },
+
+  chartScrollContent: {
+    paddingRight: 20,
+  },
 });
 
-/* 
-In this chamber, we love bringing up statistics and data. But let's put all of that aside for jus
-
-
-*/
+// asdopakpsdokpaosdkpoasdkpoaksdpkaspok

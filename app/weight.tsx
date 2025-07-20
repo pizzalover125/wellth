@@ -1,15 +1,21 @@
-import * as Font from 'expo-font';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StatusBar, StyleSheet, Text, View } from 'react-native';
-import NavigationBar from '../components/NavigationBar';
+import * as Font from "expo-font";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import NavigationBar from "../components/NavigationBar";
 
 export default function Index() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
     Font.loadAsync({
-      'PixelFont': require('../assets/fonts/Press Start 2P Regular.ttf'),
+      PixelFont: require("../assets/fonts/Press Start 2P Regular.ttf"),
     }).then(() => setFontsLoaded(true));
   }, []);
 
@@ -18,7 +24,7 @@ export default function Index() {
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#2563eb" />
         <LinearGradient
-          colors={['#3b82f6', '#1d4ed8']}
+          colors={["#619dffff", "#1740b0ff"]}
           style={styles.gradient}
         >
           <View style={styles.loadingContainer}>
@@ -34,13 +40,15 @@ export default function Index() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#2563eb" />
       <LinearGradient
-        colors={['#3b82f6', '#1d4ed8']}
+        colors={["#619dffff", "#1740b0ff"]}
         style={styles.gradient}
       >
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={[styles.title, styles.pixelFont]}>Weight</Text>
-            <Text style={[styles.tagline, styles.pixelFont]}>Track your weight.</Text>
+            <Text style={[styles.tagline, styles.pixelFont]}>
+              Track your weight.
+            </Text>
           </View>
         </View>
         <NavigationBar />
@@ -58,52 +66,52 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     paddingHorizontal: 32,
     paddingTop: 120,
     paddingBottom: 60,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: 40,
-    fontWeight: '300',
-    color: '#ffffff',
+    fontWeight: "300",
+    color: "#ffffff",
     marginBottom: 8,
     letterSpacing: -1,
   },
   tagline: {
     fontSize: 18,
-    color: '#bfdbfe',
-    fontWeight: '400',
+    color: "#bfdbfe",
+    fontWeight: "400",
     letterSpacing: 0.5,
   },
   pixelFont: {
-    fontFamily: 'PixelFont',
+    fontFamily: "PixelFont",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     gap: 20,
   },
   loadingText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 16,
-    fontWeight: '400',
-    textAlign: 'center',
+    fontWeight: "400",
+    textAlign: "center",
   },
   actions: {
     gap: 16,
   },
   primaryButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     paddingVertical: 18,
     paddingHorizontal: 32,
     borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -113,23 +121,23 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   primaryButtonText: {
-    color: '#1d4ed8',
+    color: "#1d4ed8",
     fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'PixelFont',
+    fontWeight: "600",
+    fontFamily: "PixelFont",
   },
   secondaryButton: {
     paddingVertical: 18,
     paddingHorizontal: 32,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: "#bfdbfe",
   },
   secondaryButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'PixelFont',
+    fontWeight: "500",
+    fontFamily: "PixelFont",
   },
 });
