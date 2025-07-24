@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, usePathname } from "expo-router";
 import React from "react";
@@ -18,6 +19,10 @@ export default function BottomNavigationBar() {
     { href: "/weight", icon: "scale-bathroom", label: "Weight" },
   ];
 
+  const handleTabPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  };
+
   return (
     <LinearGradient
       colors={["#00217aff", "#1844a4ff"]}
@@ -29,7 +34,7 @@ export default function BottomNavigationBar() {
 
           return (
             <Link key={tab.href} href={tab.href} asChild>
-              <TouchableOpacity style={styles.tab}>
+              <TouchableOpacity style={styles.tab} onPress={handleTabPress}>
                 <MaterialCommunityIcons
                   name={tab.icon}
                   size={24}
@@ -55,8 +60,8 @@ export default function BottomNavigationBar() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 34,
-    paddingTop: 12,
+    paddingBottom: 24,
+    paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: "rgba(191, 219, 254, 0.2)",
   },
@@ -64,18 +69,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
   },
   tab: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    minWidth: 60,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    minWidth: 48,
   },
   tabLabel: {
-    fontSize: 10,
-    marginTop: 4,
+    fontSize: 9,
+    marginTop: 2,
     textAlign: "center",
     letterSpacing: 0.5,
   },

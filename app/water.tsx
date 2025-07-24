@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Font from "expo-font";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useState } from "react";
@@ -22,7 +23,7 @@ import NavigationBar from "../components/NavigationBar";
 
 interface SessionLog {
   id: string;
-  amount: number; // ml
+  amount: number;
   time: Date;
   name?: string;
 }
@@ -51,15 +52,13 @@ export default function Index() {
   const [showStats, setShowStats] = useState(false);
   const [editingSession, setEditingSession] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [dailyGoal, setDailyGoal] = useState(2000); // Default 2000ml
+  const [dailyGoal, setDailyGoal] = useState(2000);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [tempGoalInput, setTempGoalInput] = useState("");
   const [goalAchieved, setGoalAchieved] = useState(false);
 
-  // Water input
-  const [waterInput, setWaterInput] = useState("250"); // default 250ml
+  const [waterInput, setWaterInput] = useState("250");
 
-  // Loaders
   const loadDailyGoal = async () => {
     try {
       const savedGoal = await SecureStore.getItemAsync(GOALS_STORAGE_KEY);
@@ -105,16 +104,14 @@ export default function Index() {
     const wasAchieved = goalAchieved;
     const isAchieved = total >= dailyGoal;
     setGoalAchieved(isAchieved);
+
     if (isAchieved && !wasAchieved) {
-      Alert.alert(
-        "🎉 Goal Achieved!",
-        `Congratulations! You've reached your daily goal of ${dailyGoal}ml!`,
-        [{ text: "Awesome!", style: "default" }]
-      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   };
 
   const openGoalModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setTempGoalInput(dailyGoal.toString());
     setShowGoalModal(true);
   };
@@ -122,13 +119,16 @@ export default function Index() {
   const saveGoal = () => {
     const newGoal = parseInt(tempGoalInput);
     if (isNaN(newGoal) || newGoal <= 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Invalid Goal", "Please enter a valid number greater than 0");
       return;
     }
     if (newGoal > 10000) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Goal Too High", "Please enter a goal less than 10,000ml");
       return;
     }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     updateDailyGoal(newGoal);
     setShowGoalModal(false);
     setTempGoalInput("");
@@ -184,13 +184,16 @@ export default function Index() {
     checkGoalAchievement();
   }, [sessionLog, dailyGoal]);
 
-  // Add water intake
   const addWater = () => {
     const amount = parseInt(waterInput);
     if (isNaN(amount) || amount <= 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Invalid Amount", "Please enter a valid amount in ml.");
       return;
     }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     const newSession: SessionLog = {
       id: Date.now().toString(),
       amount,
@@ -200,14 +203,15 @@ export default function Index() {
     setWaterInput("250");
   };
 
-  // Edit/delete logic
   const startEditingSession = (sessionId: string, currentName?: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditingSession(sessionId);
     setEditingName(currentName || "");
   };
 
   const saveSessionName = () => {
     if (editingSession) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const updatedLog = sessionLog.map((session) =>
         session.id === editingSession
           ? { ...session, name: editingName.trim() || undefined }
@@ -220,17 +224,24 @@ export default function Index() {
   };
 
   const cancelEditingSession = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditingSession(null);
     setEditingName("");
   };
 
   const deleteSession = (sessionId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert("Delete Entry", "Are you sure you want to delete this entry?", [
-      { text: "Cancel", style: "cancel" },
+      {
+        text: "Cancel",
+        style: "cancel",
+        onPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+      },
       {
         text: "Delete",
         style: "destructive",
         onPress: () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           const updatedLog = sessionLog.filter(
             (session) => session.id !== sessionId
           );
@@ -241,15 +252,21 @@ export default function Index() {
   };
 
   const clearAllSessions = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
       "Clear All Entries",
       "Are you sure you want to delete all water intake data? This action cannot be undone.",
       [
-        { text: "Cancel", style: "cancel" },
+        {
+          text: "Cancel",
+          style: "cancel",
+          onPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+        },
         {
           text: "Clear All",
           style: "destructive",
           onPress: async () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             updateSessionLog([]);
             try {
               await SecureStore.deleteItemAsync(STORAGE_KEY);
@@ -270,7 +287,6 @@ export default function Index() {
     );
   };
 
-  // Chart data
   const getStatsData = (days: number): ChartData => {
     const now = new Date();
     const startDate = new Date(now);
@@ -532,7 +548,7 @@ export default function Index() {
                       {
                         width: "100%",
                         fontSize: 22,
-                        padding: 20,
+                        padding: 12,
                         flex: 1,
                       },
                     ]}
@@ -546,7 +562,7 @@ export default function Index() {
                 <View
                   style={{
                     flexDirection: "row",
-                    gap: 16,
+                    gap: 5,
                     alignItems: "center",
                     width: "100%",
                   }}
@@ -558,7 +574,7 @@ export default function Index() {
                     <Text
                       style={[
                         styles.buttonText,
-                        { textAlign: "center", fontSize: 20 },
+                        { textAlign: "center", fontSize: 14 },
                       ]}
                     >
                       Add
@@ -574,7 +590,10 @@ export default function Index() {
                   styles.logButton,
                   styles.halfWidthButton,
                 ]}
-                onPress={() => setShowLog(true)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowLog(true);
+                }}
               >
                 <Text style={[styles.buttonText, { textAlign: "center" }]}>
                   View Log ({sessionLog.length})
@@ -586,7 +605,10 @@ export default function Index() {
                   styles.statsButton,
                   styles.halfWidthButton,
                 ]}
-                onPress={() => setShowStats(true)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowStats(true);
+                }}
               >
                 <Text style={[styles.buttonText, { textAlign: "center" }]}>
                   View Stats
@@ -608,7 +630,10 @@ export default function Index() {
             </Text>
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => setShowGoalModal(false)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowGoalModal(false);
+              }}
             >
               <Ionicons name="close" size={20} color="#ffffff" />
             </TouchableOpacity>
@@ -657,7 +682,10 @@ export default function Index() {
               )}
               <TouchableOpacity
                 style={styles.closeButton}
-                onPress={() => setShowLog(false)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowLog(false);
+                }}
               >
                 <Ionicons name="close" size={20} color="#ffffff" />
               </TouchableOpacity>
@@ -696,7 +724,10 @@ export default function Index() {
             </Text>
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => setShowStats(false)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowStats(false);
+              }}
             >
               <Ionicons name="close" size={20} color="#ffffff" />
             </TouchableOpacity>

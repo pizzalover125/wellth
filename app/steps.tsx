@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Font from "expo-font";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import * as SecureStore from "expo-secure-store";
 import * as Pedometer from "expo-sensors/build/Pedometer";
@@ -72,8 +73,7 @@ export default function Index() {
   const [editingSession, setEditingSession] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  // Daily Goals States
-  const [dailyGoal, setDailyGoal] = useState(10000); // Default 10,000 steps
+  const [dailyGoal, setDailyGoal] = useState(10000);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [tempGoalInput, setTempGoalInput] = useState("");
   const [goalAchieved, setGoalAchieved] = useState(false);
@@ -113,7 +113,6 @@ export default function Index() {
 
     setGoalAchieved(isAchieved);
 
-    // Show celebration only when goal is first achieved
     if (isAchieved && !wasAchieved && totalSteps !== null) {
       Alert.alert(
         "🎉 Goal Achieved!",
@@ -124,11 +123,14 @@ export default function Index() {
   };
 
   const openGoalModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     setTempGoalInput(dailyGoal.toString());
     setShowGoalModal(true);
   };
 
   const saveGoal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newGoal = parseInt(tempGoalInput);
     if (isNaN(newGoal) || newGoal <= 0) {
       Alert.alert("Invalid Goal", "Please enter a valid number greater than 0");
@@ -303,7 +305,6 @@ export default function Index() {
     };
   }, [sessionActive, isPedometerAvailable]);
 
-  // Check goal achievement when total steps change
   useEffect(() => {
     if (totalSteps !== null) {
       checkGoalAchievement();
@@ -311,6 +312,7 @@ export default function Index() {
   }, [totalSteps, dailyGoal]);
 
   const startSession = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSessionSteps(0);
     setSessionDuration(0);
     const startTime = new Date();
@@ -346,6 +348,7 @@ export default function Index() {
   };
 
   const stopSession = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (subscription) {
       subscription.remove();
       setSubscription(null);
@@ -401,6 +404,8 @@ export default function Index() {
   };
 
   const saveSessionName = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     if (editingSession) {
       const updatedLog = sessionLog.map((session) =>
         session.id === editingSession
@@ -419,6 +424,8 @@ export default function Index() {
   };
 
   const deleteSession = (sessionId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     Alert.alert(
       "Delete Session",
       "Are you sure you want to delete this session?",
@@ -439,6 +446,8 @@ export default function Index() {
   };
 
   const clearAllSessions = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     Alert.alert(
       "Clear All Sessions",
       "Are you sure you want to delete all session data? This action cannot be undone.",
@@ -594,7 +603,6 @@ export default function Index() {
             )}
           </View>
 
-          {/* Daily Goal Section */}
           <View style={styles.goalContainer}>
             <TouchableOpacity style={styles.goalHeader} onPress={openGoalModal}>
               <View style={styles.goalInfo}>
@@ -687,7 +695,6 @@ export default function Index() {
         <NavigationBar />
       </LinearGradient>
 
-      {/* Goal Setting Modal - Fixed */}
       <Modal visible={showGoalModal} animationType="slide" transparent={true}>
         <View style={styles.goalModalOverlay}>
           <View style={styles.goalModalContainer}>
@@ -730,7 +737,6 @@ export default function Index() {
         </View>
       </Modal>
 
-      {/* Session Log Modal - Fixed */}
       <Modal
         visible={showLog}
         animationType="slide"
@@ -780,7 +786,6 @@ export default function Index() {
         </View>
       </Modal>
 
-      {/* Stats Modal - Fixed */}
       <Modal
         visible={showStats}
         animationType="slide"
@@ -813,7 +818,6 @@ export default function Index() {
               style={styles.statsScrollView}
               contentContainerStyle={styles.statsContent}
             >
-              {/* Past 3 Days */}
               <View style={styles.chartContainer}>
                 <Text style={[styles.chartTitle, styles.pixelFont]}>
                   Past 3 Days
@@ -963,7 +967,6 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
 
-  // Daily Goal Styles
   goalContainer: {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderRadius: 16,
@@ -1027,7 +1030,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
 
-  // Goal Modal Styles
   goalModalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
