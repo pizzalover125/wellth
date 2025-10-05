@@ -6,4 +6,4 @@ A minimalist health app. No fancy charts nobody understands; just minimalism.  E
 Pedometer, Water Tracker, Weight Tracker, and more to come!
 
 ## Download
-Go to https://wellth-health.netlify.app/ and install the APK for Android! Going on Testflight very, very soon.
+Unfortunately, the APK and Testflight aren't working. For now, please clone the repo, install dependencies with `npm i`, install Expo Go on an Android/iOS, run `npx expo start` and view this majestic app!	
